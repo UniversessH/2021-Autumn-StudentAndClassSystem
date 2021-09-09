@@ -1,6 +1,7 @@
 package com.company;
 
 import java.sql.*;
+import java.util.Scanner;
 
 public class Main {
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver"; //注册驱动
@@ -22,10 +23,15 @@ public class Main {
 
             //查询课表内容
             System.out.println("实例化Statement对象...");
-            stmt = conn.createStatement();
-            String sql; //定义查询的SQL语句
+
+            String sql; //定义查询课程表的SQL语句
             sql = "SELECT id, className, classNum FROM classdata";
-            ResultSet rs = stmt.executeQuery(sql);
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            System.out.println("欢迎使用学生选课系统，请输入课程编号以进行选课，输入0以结束选课 (严禁输入课程编号以外的数字)");
+
+
 
             //展开结果集数据库
             while(rs.next()){
@@ -34,15 +40,72 @@ public class Main {
                 String className = rs.getString("className");
                 int classNum = rs.getInt("classNum");
                 System.out.print("课程编号：" + id);
-                System.out.print(",   课程名称：" + className);
-                System.out.println(",   课程数量：" + classNum);
+                System.out.print(",\t\t课程名称：" + className);
+                System.out.println(",\t\t课程余量：" + classNum);
             }
 
+            //选课
+            int[] classTag = new int[6];
+            int temp = 0;
+            int index = 0;
+            Scanner scan = new Scanner(System.in);
+            while (true){
+                if(classTag[5] != 0)
+                {
+                    System.out.println("请至少选择三门课程，最多不超过五门课程，接下来请重新选课");
+                    classTag = new int[6]; //将选课内容清0
+                    index = 0;
+                    continue;
+                }
+                temp = scan.nextInt();
+                classTag[index] = temp;
+                if(temp == 0){
+                    if(index<3) {
+                        System.out.println("请至少选择三门课程，最多不超过五门课程，接下来请重新选课");
+                        classTag = new int[6]; //将选课内容清0
+                        index = 0;
+                        continue;
+                    }else if(CompareInt(classTag,index)){
+                        System.out.println("请不要输入相同的课程代号！接下来请重新选课");
+                        classTag = new int[6]; //将选课内容清0
+                        index = 0;
+                        continue;
+                    }else {
+                        break;
+                    }
+                }
+                index++;
+            }
+
+            //展示选课结果并修改数据库
+            String classes = "";
+            for(int i=0; i<index-1; i++){
+                classes = classes + classTag[i] + ',';
+            }
+            classes = classes + classTag[index-1];
+            String sql1; //定义查询所选课程的SQL语句
+            String sql2; //定义修改课程数量的SQL语句
+            sql1 = "SELECT className FROM classdata WHERE id IN (" + classes + ")";
+            sql2 = "UPDATE classdata SET classNum=classNum-1 WHERE id IN (" + classes + ")";
+            PreparedStatement ps1 = conn.prepareStatement(sql1);
+            PreparedStatement ps2 = conn.prepareStatement(sql2);
+            ResultSet rs1 = ps1.executeQuery(sql1);
+            int n = ps2.executeUpdate(); //返回更新的行数
+            System.out.println("你所选取的课程为:");
+            while(rs1.next()){
+                //通过字段检索
+                String className = rs1.getString("className");
+                System.out.println(className);
+            }
 
             //完成后关闭
             rs.close();
-            stmt.close();
+            rs1.close();
+            ps.close();
+            ps1.close();
+            ps2.close();
             conn.close();
+            scan.close();
         }catch(SQLException se){
             // 处理 JDBC 错误
             se.printStackTrace();
@@ -63,5 +126,14 @@ public class Main {
             }
         }
         System.out.println("Say goodbye");
+    }
+
+    public static boolean CompareInt(int[] classTag,int index){
+        for(int i=0; i<index; i++){
+            for(int j=i+1; j<index; j++){
+                if(classTag[i] == classTag[j]) return true; //当数组中存在两个数字相等，返回true
+            }
+        }
+        return false;
     }
 }
