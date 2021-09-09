@@ -1,1 +1,3 @@
 # 2021-Autumn-StudentAndClassSystem
+
+基于MySQL与Java的学生选课及学籍管理系统
